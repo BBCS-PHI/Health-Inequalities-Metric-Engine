@@ -90,7 +90,7 @@ run_all <- function(conn, indicator_ids = "All", schema_name, table_name) {
   #------------------------- Metadata ------------------------------------------
   
   cli::cli_h1("Load Metadata")
-  
+
   metadata <- DBI::dbGetQuery(
     conn,
     "
@@ -98,34 +98,34 @@ run_all <- function(conn, indicator_ids = "All", schema_name, table_name) {
   FROM [Cluster_BBCS].[BBCS].[HI_Metric_Engine_Reference_Metadata]
   "
   )
-  
+
   # Save metadata in the environment
   assign("metadata", metadata, envir = .GlobalEnv)
-  
+
   age_metadata <- DBI::dbGetQuery(
     conn,
     "SELECT *
      FROM [Cluster_BBCS].[BBCS].[HI_Metric_Engine_Reference_Age_Metadata]"
   )
-  
+
   # Save age metadata in the environment
   assign("age_metadata", age_metadata, envir = .GlobalEnv)
-  
+
   cli::cli_alert_success("Process completed.")
-  
-  #-------------------- Load staging data --------------------------------------
-  
+
+  # #-------------------- Load staging data --------------------------------------
+
   cli::cli_h1("Data Extraction")
-  
+
   #  Normalize indicator_ids
   ids <- metricengineR::normalise_indicator_ids(indicator_ids)
-  
+
   if (is.null(ids) || length(ids) == 0) {
     message("Extracting ALL indicators from staging table ...")
   } else {
     message(sprintf("Extracting %d indicator(s) from staging table ...", length(ids)))
   }
-  
+
   # Get indicators from the staging table
   staging_data <- metricengineR::get_indicators_from_sql(
     conn = conn,
@@ -133,10 +133,10 @@ run_all <- function(conn, indicator_ids = "All", schema_name, table_name) {
     table_name = table_name,
     indicator_ids = indicator_ids,
   )
-  
+
   # Save staging data in the environment
   assign("staging_data", staging_data, envir = .GlobalEnv)
-  
+
   #-------------------- Run ETL ------------------------------------------------
   
   cli::cli_h1("Data Processing")
@@ -183,7 +183,6 @@ run_all_dq_checks(df = output$result$combined_calc_dfs,
 
 #6. Standardize output ---------------------------------------------------------
 result <- output$result$combined_calc_dfs |>
-  # dplyr::filter(time_period_type %in% c("1 year", "Monthly", "Quarterly")) |> 
   dplyr::mutate(insertion_date_time = Sys.time()) |>
   dplyr::mutate(
     indicator_id     = as.integer(indicator_id),
@@ -222,44 +221,12 @@ metricengineR::replace_indicator_data_in_sql(
   conn,
   database_name = "Cluster_BBCS",
   schema_name   = "BBCS",
-  table_name    = "Cluster_BBCS.BBCS.HI_Metric_Engine_Output_Data",
-  data     = result,
+  table_name    = "HI_Metric_Engine_Output_Data",
+  data          = result,
   indicator_ids = ids,
   id_column = "indicator_id"
 )
 
 
-# 8) Output table updates ------------------------------------------------------
-
-# Add additional columns for SPC value, SPC chart eligibility, latest data point flag
-
-# cli::cli_h1("Final Data Output Updates")
-# 
-# DBI::dbExecute(
-#   conn,
-#   "EXEC [Cluster_BBCS].[BBCS].[Oversight_Framework_Final_Output_Table_Updates]"
-# )
-# 
-# cli::cli_alert_success("Process completed.")
-
-# 9) Create SPC charts ---------------------------------------------------------
-
-# cli::cli_h1("SPC Charts ")
-# 
-# DBI::dbExecute(
-#   conn,
-#   "EXEC [Cluster_BBCS].[BBCS].[Oversight_Framework_SPC_SCV]"
-# )
-# 
-# # End timer
-# 
-# run_end <- Sys.time()
-# 
-# total_mins <- round(as.numeric(difftime(run_end, run_start, units = "mins")), 2)
-# 
-# cli::cli_alert_success("Process completed.")
-# 
-# cli::cli_alert_info(" Total run time: {total_mins} min")
-
-# 10) Close database connection ----------------------------------------------------
+# 8) Close database connection ----------------------------------------------------
 DBI::dbDisconnect(conn)

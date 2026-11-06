@@ -278,7 +278,6 @@ calculate_values <- function(
   
   difference <- df_calc |> 
     metricengineR::calculate_difference(
-      confidence_intervals_required = FALSE
     ) |> 
     metricengineR::tidy_output()
   
@@ -299,7 +298,6 @@ calculate_values <- function(
   
   output <- dplyr::bind_rows(
     df_keep,          
-    df_skip,          
     percentage,            
     crude_rate,             
     ratio,            
@@ -422,6 +420,7 @@ calculate_values <- function(
   
   list(
     combined_calc_dfs = output,
+    df_calc = df_calc,
     df_keep = df_keep,
     df_skip = df_skip,
     percentage = percentage,
